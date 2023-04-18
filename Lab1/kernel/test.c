@@ -1,1 +1,0 @@
-int syscallcount = 0;
