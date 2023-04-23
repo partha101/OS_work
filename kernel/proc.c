@@ -684,22 +684,22 @@ procdump(void)
   }
 }
 
-// New method to calculate the number of active process count.
+// The total_active_process is defined here 
 int
-total_active_processes(void)
-{
-  struct proc *p;
-  int total_count = 0;
+total_active_processes(void) {
+    struct proc *process;
+    int active_process_count = 0;
+    int i;
 
-  for(p = proc; p < &proc[NPROC]; p++){
-    // Active processes are every process that does not have an UNUSED state or a USED state.
-    // I.e. : processes that are SLEEPING, RUNNABLE, RUNNING, or ZOMBIE
-    if(p->state >= 0 && p->state != UNUSED && p->state != USED) {
-     total_count++;
+    for (i = 0; i < NPROC; i++) {
+        process = &proc[i];
+
+        if (process->state >= 0 && process->state != UNUSED && process->state != USED) {
+            active_process_count++;
+        }
     }
-  }
 
-  return total_count;
+    return active_process_count;
 }
 
 //the print_sysinfo function outputs different system info
@@ -708,23 +708,28 @@ total_active_processes(void)
 //param = 1 outputs total system calls invoked after boot
 //param = 2 outputs total number of free pages
 //else outputs -1.
-int print_sysinfo(int n)
-{
+int print_sysinfo(int n) {
+    int result;
 
-  if(n == 0) {
-    return total_active_processes();
-  }
-  else if(n == 1) {
-    return syscallcount - 1;
-  }
-  else if(n == 2) {
-    return free_memory_pages();
-  }
-  else {
-    return -1;
-  }
+    switch (n) {
+        case 0:
+            result = total_active_processes();
+            break;
+        case 1:
+            result = syscallcount - 1;
+            break;
+        case 2:
+            result = free_memory_pages();
+            break;
+        default:
+            result = -1;
+            break;
+    }
+
+    return result;
 }
 
+// Implementation of procinfo function
 int
 procinfo(struct pinfo* info) {
  	struct proc* p = myproc();

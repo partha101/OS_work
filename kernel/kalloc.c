@@ -84,7 +84,8 @@ kalloc(void)
 //This function is declared to count the number of free memory pages.
 //The function uses the kmem.freelist and iterates through it to count total
 //free pages
-int free_memory_pages(void)
+int
+free_memory_pages(void)
 {
   struct run *head;
   int count = 0;

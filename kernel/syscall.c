@@ -135,23 +135,29 @@ static uint64 (*syscalls[])(void) = {
 };
 
 void
-syscall(void)
-{
-  int num;
-  struct proc *p = myproc();
-  p->sys_call_count += 1;  ///system call count for the process is incremented here
+syscall(void) {
+    int num;
+    struct proc *p = myproc();
+    p->sys_call_count += 1; // system call count for the process is incremented here
 
-  num = p->trapframe->a7;
-  syscallcount++;  //we increment the system call count everytime syscall function is invoked.
-  if(num > 0 && num < NELEM(syscalls) && syscalls[num]) {
-    // Use num to lookup the system call function for num, call it,
-    // and store its return value in p->trapframe->a0
-    p->trapframe->a0 = syscalls[num]();
-   
-  } else {
-    printf("%d %s: unknown sys call %d\n",
-            p->pid, p->name, num);
-    p->trapframe->a0 = -1;
-  }
+    num = p->trapframe->a7;
+    syscallcount++; // we increment the system call count everytime syscall function is invoked.
 
+    if (num > 0 && num < NELEM(syscalls)) {
+        void *(*syscall_func)(void) = syscalls[num];
+        if (syscall_func) {
+            // Use num to lookup the system call function for num, call it,
+            // and store its return value in p->trapframe->a0
+            p->trapframe->a0 = syscall_func();
+        } else {
+            printf("%d %s: unknown sys call %d\n",
+                   p->pid, p->name, num);
+            p->trapframe->a0 = -1;
+        }
+    } else {
+        printf("%d %s: unknown sys call %d\n",
+               p->pid, p->name, num);
+        p->trapframe->a0 = -1;
+    }
 }
+
