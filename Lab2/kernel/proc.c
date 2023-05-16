@@ -125,10 +125,10 @@ allocproc(void)
 found:
   p->pid = allocpid();
   p->state = USED;
-  //Lab2. Intialize ticks = 0, tickets = 10000, pass = 1
-  p->ticks = 0;
-  p->tickets = 10000;
-  p->pass = 10000/p->tickets;
+  //Lab2 initialization for processes
+  p->ticks = 0; // default value for ticks is 0
+  p->tickets = 10000; // default value for number of tickets is 10000
+  p->pass = 10000/p->tickets; // default value for pass (= big constant K/#tickets)
 
   // Allocate a trapframe page.
   if((p->trapframe = (struct trapframe *)kalloc()) == 0){
@@ -165,9 +165,11 @@ freeproc(struct proc *p)
   p->trapframe = 0;
   if(p->pagetable)
     proc_freepagetable(p->pagetable, p->sz);
+ // Lab2 reset of fields when a process is freed
   p->ticks = 0;
   p->tickets = 0;
   p->pass = 0;
+///////////////////////////////////////////////
   p->pagetable = 0;
   p->sz = 0;
   p->pid = 0;
@@ -457,19 +459,27 @@ void stride_scheduler(void)      __attribute__((noreturn));
 //  - swtch to start running that process.
 //  - eventually that process transfers control
 //    via swtch back to the scheduler.
+
+
+// Function to determine the scheduling algorithm based on defined flags
 void
-scheduler(void)
-{
-  #if defined(LOTTERY)
-    lottery_scheduler();
-  #elif defined(STRIDE)
-    stride_scheduler();
-  #else
-    round_robin_scheduler();
-  #endif
+scheduler(void) {
+    // If LOTTERY flag is defined, use lottery scheduling
+    #if defined(LOTTERY)
+        lottery_scheduler();
+
+    // If STRIDE flag is defined, use stride scheduling
+    #elif defined(STRIDE)
+        stride_scheduler();
+
+    // In all other cases, use round robin scheduling
+    #else
+        round_robin_scheduler();
+    #endif
 }
 
-// Lab 2
+
+// Lab 2: Implementation of lottery and stride scheduler
 // pseudo random generator (https://stackoverflow.com/a/7603688)
 unsigned short lfsr = 0xACE1u;
 unsigned short bit;
@@ -478,86 +488,97 @@ unsigned short rand(){
   return lfsr = (lfsr >> 1) | (bit << 15);
 }
 
-// Lottery Scheduler
-void lottery_scheduler(void){
-  struct proc *p;
-  struct cpu *c = mycpu();
-  c->proc = 0;
-  
-  for(;;){
-    // Avoid deadlock by ensuring that devices can interrupt.
-    intr_on();
-    
-    // Total tickets initialization
-    int total_tickets = 0;
-    
-    // Current ticket counter initialization
-    int count_current_ticket = 0;
-    
-    // Iterate through the processes
-    for(p = proc; p < &proc[NPROC]; p++){
-      total_tickets = total_tickets + p->tickets; // Storing total tickets from each process 
-    }
 
-    // Choosing winner ticket from the random function
-    int winner = rand()%(total_tickets + 1);
-    
-    // Iterate through all the processes
-    for(p = proc; p < &proc[NPROC]; p++) {
-      count_current_ticket = count_current_ticket + p->tickets; // Increment current ticket count
-      // Select the process if current ticket is greater than winner
-      if(count_current_ticket >= winner){
-        // Change process state
-        // Similar to round robin
-        acquire(&p->lock);
-        if(p->state == RUNNABLE){
-          p->state = RUNNING;
-          c->proc = p;
-          swtch(&c->context, &p->context);
-          c->proc = 0;
-          // Increment ticks (scheduled number of times)
-          p->ticks = p->ticks + 1;
+// Function for lottery scheduling
+void lottery_scheduler() {
+    struct proc *p;
+    struct cpu *c = mycpu();
+    c->proc = 0;
+
+    while(1) {
+        // Enable devices to interrupt to avoid deadlock
+        intr_on();
+
+        // Initialize total tickets and current ticket counter
+        int total_tickets = 0;
+        int current_ticket_count = 0;
+
+        // Calculate total tickets from all processes
+        for(p = proc; p < &proc[NPROC]; p++){
+            total_tickets += p->tickets;
         }
-        release(&p->lock);
-        break;
-      }
-    }
-  }
-} 
 
-//Lab2. Stride Scheduler 
-void stride_scheduler(void) {
-	struct proc *p;
-	struct proc *minProc = proc;
-	int min = INT_MAX;
-	struct cpu *c = mycpu();
-	c->proc = 0;
-	for(;;) {
-		intr_on();
-		//Loops through all runnable processes and finds the lowest pass process
-		for(p=proc; p < &proc[NPROC]; p++) {
-			if(p->state != RUNNABLE) { continue; }
-			if(p->pass < min) {
-				min = p->pass;
-				minProc = p;
-			}
-		}
-		//Run chosen process and update process fields
-		acquire(&minProc->lock);
-		if(minProc->state == RUNNABLE) {
-			//printf("\npass: %d, pid: %d\n", minProc->pass, minProc->pid);
-			minProc->state = RUNNING;
-			minProc->ticks++;
-			minProc->pass += 10000/minProc->tickets;
-			c->proc = minProc;
-			swtch(&c->context, &minProc->context);
-			c->proc = 0;
-			min = INT_MAX;
-		}
-		release(&minProc->lock);
-	}
+        // Generate a winner ticket randomly
+        int winning_ticket = rand() % (total_tickets + 1);
+
+        // Iterate through all processes to find the winner
+        for(p = proc; p < &proc[NPROC]; p++) {
+            current_ticket_count += p->tickets;
+
+            // If current ticket count reaches or exceeds winning ticket, 
+            // select this process to run next
+            if(current_ticket_count >= winning_ticket){
+                // Lock the process for safe update
+                acquire(&p->lock);
+
+                // If process is runnable, run it
+                if(p->state == RUNNABLE){
+                    p->state = RUNNING;
+                    c->proc = p;
+                    swtch(&c->context, &p->context);
+                    c->proc = 0;
+                    // Increase process tick count
+                    p->ticks++;
+                }
+
+                // Release the lock after update
+                release(&p->lock);
+                break;
+            }
+        }
+    }
 }
 
+
+// Implementation of stride scheduling
+void stride_scheduler() {
+    struct proc *p;
+    struct proc *lowest_stride_process = proc;
+    int lowest_stride_value = INT_MAX;
+    struct cpu *c = mycpu();
+    c->proc = 0;
+
+    while(1) {
+        // Enable devices to interrupt to avoid deadlock
+        intr_on();
+
+        // Iterate through all runnable processes to find the process with lowest stride
+        for(p = proc; p < &proc[NPROC]; p++) {
+            if(p->state != RUNNABLE) { continue; }
+            if(p->pass < lowest_stride_value) {
+                lowest_stride_value = p->pass;
+                lowest_stride_process = p;
+            }
+        }
+
+        // Lock the process for safe update
+        acquire(&lowest_stride_process->lock);
+
+        // If chosen process is runnable, run it and update its fields
+        if(lowest_stride_process->state == RUNNABLE) {
+            lowest_stride_process->state = RUNNING;
+            lowest_stride_process->ticks++;
+            lowest_stride_process->pass += 10000 / lowest_stride_process->tickets;
+            c->proc = lowest_stride_process;
+            swtch(&c->context, &lowest_stride_process->context);
+            c->proc = 0;
+            lowest_stride_value = INT_MAX;
+        }
+
+        // Release the lock after update
+        release(&lowest_stride_process->lock);
+    }
+}
 
 // Default XV6 scheduler
 void round_robin_scheduler(void) {
@@ -799,30 +820,50 @@ procdump(void)
   }
 }
 
-// Lab 2 System Calls:
+// Lab 2: Implementation of the sched_statistics systemcall
 void sched_statistics(void) {
-  // For each process
-  struct proc *p;
-  for(p = proc; p < &proc[NPROC]; p++){
-    acquire(&p->lock);
-    if(p->state != UNUSED) {
-      printf("\n%d(%s): tickets: %d, ticks: %d", p->pid, p->name, p->tickets, p->ticks);
+    // Pointer to a process
+    struct proc *p;
+
+    // Iterate over all processes
+    for(p = proc; p < &proc[NPROC]; p++) {
+        // Acquire lock to ensure process data consistency
+        acquire(&p->lock);
+
+        // Only consider processes that are not unused
+        if(p->state != UNUSED) {
+            // Print process ID, name, tickets, and ticks
+            printf("\n%d(%s): tickets: %d, ticks: %d", 
+                    p->pid, 
+                    p->name, 
+                    p->tickets, 
+                    p->ticks);
+        }
+
+        // Release lock
+        release(&p->lock);
     }
-    release(&p->lock);
-  }
 }
 
+// Lab 2: Implementtaion of the sched_tickets systemcall
 void sched_tickets(int tickets) {
-  // Validate tickets parameter
-  if (tickets < 0 || tickets > 10000)
-    return;
+    // Ensure tickets are within a valid range
+    if (tickets < 0 || tickets > 10000) {
+        printf("Error: Invalid number of tickets. Must be between 0 and 10000.\n");
+        return;
+    }
 
-  // Get current process
-   struct proc *p = myproc();
+    // Get the current process
+    struct proc *current_process = myproc();
 
-  // Set tickets
-  acquire(&p->lock);
-  p->tickets = tickets;
-  p->pass = 10000/tickets;
-  release(&p->lock);
+    // Acquire lock to ensure process data consistency
+    acquire(&current_process->lock);
+
+    // Update the tickets and pass values for the process
+    current_process->tickets = tickets;
+    current_process->pass = 10000 / tickets;
+
+    // Release the lock
+    release(&current_process->lock);
 }
+

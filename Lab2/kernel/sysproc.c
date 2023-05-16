@@ -110,11 +110,12 @@ sys_sched_statistics(void)
 // Parameter: tickets (int)
 // Returns: 0
 uint64
-sys_sched_tickets(void)
-{
-  int num_tickets;
-  argint(0, &num_tickets);
-  sched_tickets(num_tickets);
+sys_sched_tickets(void) {
+    int ticket_count;
 
-  return 0;
+    argint(0, &ticket_count);
+
+    sched_tickets(ticket_count);
+    return 0;
 }
+

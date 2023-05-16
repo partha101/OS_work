@@ -101,9 +101,9 @@ extern uint64 sys_unlink(void);
 extern uint64 sys_link(void);
 extern uint64 sys_mkdir(void);
 extern uint64 sys_close(void);
-// Lab 2 System Calls
-extern uint64 sys_sched_statistics(void);
-extern uint64 sys_sched_tickets(void);
+// Lab 2 System Calls are declared here
+extern uint64 sys_sched_statistics(void);  // sched_statistics systemcall defined here
+extern uint64 sys_sched_tickets(void);     // sched_tickets systemcall defined here
 
 // An array mapping syscall numbers from syscall.h
 // to the function that handles the system call.

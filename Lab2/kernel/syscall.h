@@ -20,6 +20,6 @@
 #define SYS_link   19
 #define SYS_mkdir  20
 #define SYS_close  21
-// Lab 2 System Calls
-#define SYS_sched_statistics 22     // int sched_statistics(void)
-#define SYS_sched_tickets    23     // int sched_tickets(int)
+// Lab 2 System Calls are declared here
+#define SYS_sched_statistics 22     // declaration for sched_statistics system call
+#define SYS_sched_tickets    23     // declaration for sched_tickets system call

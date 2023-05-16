@@ -103,10 +103,11 @@ struct proc {
   struct context context;      // swtch() here to run process
   struct file *ofile[NOFILE];  // Open files
   struct inode *cwd;           // Current directory
-  char name[16];               // Process name (debugging)
-  uint64 tickets;		//Lab2. # of tickets process holds
-  uint64 ticks;			//Lab2. # of ticks a process has consumed
-  uint64 pass;			//Lab2. Pass field for Stride Scheduler
+  // Lab2 attributes are added here
+  char name[16];               // Name of the process to be printed
+  uint64 tickets;		// number of tickets allocated to the process
+  uint64 ticks;			// number of times the process is scheduled (tick value)
+  uint64 pass;			// Pass value for stride scheduling, to be increased each time process is scheduled
 
 
 };
