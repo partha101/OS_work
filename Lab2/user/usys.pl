@@ -37,5 +37,5 @@ entry("sbrk");
 entry("sleep");
 entry("uptime");
 # Lab 2 System Calls
-entry("sched_statistics"); # int sched_statistics(void)
-entry("sched_tickets");    # int sched_tickets(int)
+entry("sched_statistics"); # entry for sched_statistics
+entry("sched_tickets");    # entry for sched_tickets
