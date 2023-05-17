@@ -91,30 +91,30 @@ sys_uptime(void)
 }
 
 // Lab 2 System Calls
-
-// Print for each process:
-// - PID
-// - Name in paranthesis
-// - Ticket Value (0 if not using stride or lottery scheduler)
-// - Number of times it has run (regardless of scheduler)
-//
-// Returns: 0
-uint64
-sys_sched_statistics(void)
-{
-  sched_statistics();
-  return 0;
+/*
+ * System call for obtaining scheduler statistics.
+ * For each process, it prints:
+ * - Process ID (PID)
+ * - Process name (in parenthesis)
+ * - Ticket value (0 if not using stride or lottery scheduler)
+ * - Number of times it has run (regardless of scheduler)
+ *
+ * Returns: 0
+ */
+uint64 sys_sched_statistics(void) {
+    sched_statistics();
+    return 0;
 }
 
-// Set caller process’s ticket value to the given parameter.
-// Parameter: tickets (int)
-// Returns: 0
-uint64
-sys_sched_tickets(void) {
+/*
+ * System call to set the caller process's ticket value to the given parameter.
+ * Parameter: tickets (int)
+ *
+ * Returns: 0
+ */
+uint64 sys_sched_tickets(void) {
     int ticket_count;
-
     argint(0, &ticket_count);
-
     sched_tickets(ticket_count);
     return 0;
 }
