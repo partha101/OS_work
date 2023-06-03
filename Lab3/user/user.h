@@ -22,7 +22,7 @@ int getpid(void);
 char* sbrk(int);
 int sleep(int);
 int uptime(void);
-int clone(void* ); // Lab3 clone
+int clone(void* ); // Lab3: clone system call is declared here
 
 // ulib.c
 int stat(const char*, struct stat*);

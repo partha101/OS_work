@@ -36,4 +36,4 @@ entry("getpid");
 entry("sbrk");
 entry("sleep");
 entry("uptime");
-entry("clone"); # Lab 3 Clone syscall
+entry("clone"); # Lab3: clone system call entry is defined here

@@ -5,7 +5,7 @@
 #include "spinlock.h"
 #include "proc.h"
 #include "defs.h"
-#include "stddef.h" // Lab3 NULL declaration
+#include "stddef.h" // Lab3: NULL declaration
 
 struct cpu cpus[NCPU];
 
@@ -14,10 +14,10 @@ struct proc proc[NPROC];
 struct proc *initproc;
 
 int nextpid = 1;
-int next_tid = 1; // Lab3 store the current number of threads
+int next_tid = 1; // Lab3: the current number of threads is stored here
 
 struct spinlock pid_lock;
-struct spinlock tid_lock; // Lab3 mutually exclusive thread spinlocks
+struct spinlock tid_lock; // Lab3: mutually exclusive thread spinlocks
 
 extern void forkret(void);
 static void freeproc(struct proc *p);
@@ -108,18 +108,28 @@ allocpid()
   return pid;
 }
 
-// Lab3 New thread will get the thread id
-// Same as allocpid()
+// Lab3: alloctid function allocates threadid
+// functionality is similar to allocpid()
 int alloctid() {
+  // Variable to store the new thread ID
   int tid;
 
+  // Acquire the lock to ensure the function is thread-safe
   acquire(&tid_lock);
+
+  // Assign the next available thread ID to tid
   tid = next_tid;
-  next_tid = next_tid + 1;
+
+  // Increment next_tid for the next thread
+  next_tid++;
+
+  // Release the lock
   release(&tid_lock);
 
+  // Return the new thread ID
   return tid;
 }
+
 
 // Look in the process table for an UNUSED proc.
 // If found, initialize state required to run in the kernel,
@@ -143,7 +153,7 @@ allocproc(void)
 found:
   p->pid = allocpid();
   p->state = USED;
-  p->tid = 0; // When process is allocated memory, initialize tid to 0.
+  p->tid = 0; // thread id is initialized for normal processes (assuming parent process)
 
   // Allocate a trapframe page.
   if((p->trapframe = (struct trapframe *)kalloc()) == 0){
@@ -227,17 +237,25 @@ freeproc(struct proc *p)
     kfree((void*)p->trapframe);
   p->trapframe = 0;
 
-  // Lab3 Instead of deallocating the page tables, unmap it
+  // Lab3: page table is not deallocated,
+  // instead if the thread id for the process is greater than zero
+  // its page table is unmapped
+  // Check if the process's pagetable is valid and the thread ID is not zero
   if (p->pagetable != 0 && p->tid != 0) {
-    uvmunmap(p->pagetable, TRAPFRAME - PGSIZE*(p->tid), 1, 0);
+    // Calculate the offset for the unmap operation
+    uint64 offset = TRAPFRAME - PGSIZE * (p->tid);
+  
+    // Unmap the memory mapped for the process's trapframe
+    uvmunmap(p->pagetable, offset, 1, 0);
   }
+
   else if(p->pagetable != 0) {
     proc_freepagetable(p->pagetable, p->sz);
   }
   p->pagetable = 0;
   p->sz = 0;
   p->pid = 0;
-  p->tid = 0; // Lab3 Reinitialize thread id after thread is freed
+  p->tid = 0; // Lab3: thread id is reinitialized after the thread is freed
   p->parent = 0;
   p->name[0] = 0;
   p->chan = 0;
@@ -427,7 +445,7 @@ exit(int status)
     panic("init exiting");
 
   // Close all open files.
-  // Lab3 thread id=0 check
+  // Lab3: only for parent process, file descriptors are closed
   if (p->tid == 0) {
     for(int fd = 0; fd < NOFILE; fd++){
         if(p->ofile[fd]){
@@ -536,16 +554,23 @@ int clone(void* stack) {
     return -1;
   }
 
-  // Parent pagetable is used for child
-  np->pagetable = p->pagetable;
+// Assign the parent's pagetable to the child process
+np->pagetable = p->pagetable;
 
-  // trampoline.S: map -> new proc trapframe page below the trampoline page
-  if(mappages(np->pagetable, TRAPFRAME - (PGSIZE * np->tid), PGSIZE,
-              (uint64)(np->trapframe), PTE_R | PTE_W) < 0){
-    uvmunmap(np->pagetable, TRAMPOLINE, 1, 0);
-    uvmfree(np->pagetable, 0);
-    return 0;
-  }
+// Calculate the trap frame offset
+uint64 trapframe_offset = TRAPFRAME - (PGSIZE * np->tid);
+
+// Set up the new trapframe page for the new process
+int map_result = mappages(np->pagetable, trapframe_offset, PGSIZE,
+              (uint64)(np->trapframe), PTE_R | PTE_W);
+
+// If mappages fails, perform cleanup and return 0
+if(map_result < 0){
+  uvmunmap(np->pagetable, TRAMPOLINE, 1, 0);
+  uvmfree(np->pagetable, 0);
+  return 0;
+}
+
   np->sz = p->sz;
 
   // copy saved user registers.

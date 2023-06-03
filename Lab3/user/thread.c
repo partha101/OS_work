@@ -4,49 +4,59 @@
 #include "user/user.h" // Define malloc
 #define PGSIZE 4096
 
+// This function creates a new thread which shares the parent's memory space
 int thread_create(void *(start_routine)(void*), void *arg) {
+  // Allocate memory of PGSIZE bytes for the new thread's stack
+  void* st_ptr = (void* )malloc(PGSIZE * sizeof(void));
 
-  // Give the st_ptr a size of PGSIZE bytes = 4096
-  int ptr_size = PGSIZE*sizeof(void);
-  void* st_ptr = (void* )malloc(ptr_size);
+  // Create a new thread, passing the stack pointer to the clone system call
   int tid = clone(st_ptr);
 
-  // Call the start_routine method for a child process with arg, which is tid = 0.
+  // If clone() returned 0, we're in the child thread
   if (tid == 0) {
+    // Call the specified function with the given argument
     (*start_routine)(arg);
+
+    // Once the function returns, terminate the thread with exit()
     exit(0);
   }
 
-  // Parent process: return 0
+  // If clone() returned non-zero, we're in the parent thread. The return value of 
+  // thread_create() should be 0 in this case.
   return 0;
 }
 
-// Lock initialization
+
+// Function to initialize the lock
 void lock_init(struct lock_t* lock) {
   lock->locked = 0;
 }
 
 void lock_acquire(struct lock_t* lock) {
-    // Inform the processor and the C compiler not to relocate any loads or stores
-    // References only occur once the lock is acquired after this point to 
-    // guarantee that the memory of the critical portion is protected.
-    // This emits a fence instruction on RISC-V.
+    // This loop will keep trying to acquire the lock. 
+    // The __sync_lock_test_and_set atomic builtin function sets the lock to 1 (locked state),
+    // and if it was previously 0 (unlocked state), it breaks the loop, thus acquiring the lock.
     while(__sync_lock_test_and_set(&lock->locked, 1) != 0);
+
+    // The __sync_synchronize function is a builtin function that emits a memory barrier, or a fence instruction on RISC-V.
+    // It ensures that all explicit memory accesses that precede this call in the instruction stream are 
+    // globally visible before any that follow it. This provides the guarantee of memory protection 
+    // for the critical section following the lock acquisition.
     __sync_synchronize();
 }
+
 
 void lock_release(struct lock_t* lock) {
-    // In order to make sure that all stores in the critical part are 
-    // accessible to other CPUs before the lock is released and that 
-    // all loads in the critical region occur strictly before the 
-    // lock is released, tell the C compiler and CPU not to move loads 
-    // or stores past this point.
-    // This emits a fence instruction on RISC-V.
+    // The __sync_synchronize function is a builtin function that emits a memory barrier, or a fence instruction on RISC-V.
+    // It ensures that all explicit memory accesses (both loads and stores) within the critical section that 
+    // precede this call in the instruction stream are globally visible before any that follow it. 
+    // This guarantees memory consistency before the lock is released.
     __sync_synchronize();
 
-    // Release the lock by writing lk->locked = 0. 
-    // The C standard suggests that an assignment may be achieved with 
-    // multiple store instructions, therefore this code does not employ an assignment.
-    __sync_lock_release(&lock->locked, 0);
+    // The __sync_lock_release function is an atomic builtin that releases the lock.
+    // It atomically sets the lock's state to 0 (unlocked). Using this function instead of a regular assignment ensures 
+    // that the operation is completed in a single instruction, thus preventing potential race conditions.
+    __sync_lock_release(&lock->locked);
 }
+
 

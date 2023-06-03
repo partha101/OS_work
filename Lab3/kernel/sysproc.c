@@ -90,10 +90,20 @@ sys_uptime(void)
   return xticks;
 }
 
-// Lab3 parent thread cloning
+// This system call handler calls the clone system call for Lab3 parent thread cloning
+
 uint64 sys_clone(void) {
+  // The variable that will hold the address of the new stack 
   uint64 stack;
-  
+
+  // Fetch the first argument from the system call arguments, which is the stack address,
+  // and store it into the stack variable
   argaddr(0, &stack);
+
+  // Call the clone function with the stack address, which creates a new thread that shares 
+  // the calling thread's memory space, and return the result. 
+  // The new thread starts executing at the same location as the calling thread, but with its 
+  // own stack.
   return clone((void* ) stack);
 }
+

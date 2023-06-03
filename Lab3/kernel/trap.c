@@ -128,10 +128,11 @@ usertrapret(void)
 //  uint64 trampoline_userret = TRAMPOLINE + (userret - trampoline);
 //  ((void (*)(uint64))trampoline_userret)(satp);
 //
-  // Lab3
-  // Jump to userret in trampoline.S at the top of memory,
-  // switching to the user page table while bearing in mind the offset caused by threadID,
-  // changes to user mode and restores user registers using sret.
+   // Lab3
+  // The following code block is executing a few important tasks related to process control flow:
+  // - Calculates the actual location of userret within the trampoline region.
+  // - Calls userret by switching to the user page table. The offset is taken into account due to the threadID.
+  // - The switch to user mode is achieved, and the user registers are restored using the 'sret' instruction.
   uint64 trampoline_userret = TRAMPOLINE + (userret - trampoline);
   ((void (*)(uint64,uint64))trampoline_userret)(TRAPFRAME - (PGSIZE * p->tid), satp);
 }

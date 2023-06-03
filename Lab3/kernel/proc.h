@@ -91,7 +91,7 @@ struct proc {
   int killed;                  // If non-zero, have been killed
   int xstate;                  // Exit status to be returned to parent's wait
   int pid;                     // Process ID
-  int tid;                     // Lab3 Iitialize Thread ID
+  int tid;                     // Lab3: extra attribute thread id is added for lightweight processes
 
   // wait_lock must be held when using this:
   struct proc *parent;         // Parent process
